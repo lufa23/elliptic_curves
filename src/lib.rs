@@ -33,25 +33,52 @@ impl EllipticCurve {
 struct FiniteField {}
 
 impl FiniteField {
-    fn add(j: &Point, k: &Point, p: &BigUint) -> BigUint {
+    fn add(j: &BigUint, k: &BigUint, p: &BigUint) -> BigUint {
+        // j + k = r mod p
+        let r = j + k;
+        r.modpow(&BigUint::from(1u32), p)
+    }
+
+    fn mul(j: &BigUint, k: &BigUint, p: &BigUint) -> BigUint {
         // j + k = r mod p
         todo!()
     }
 
-    fn mul(j: &Point, k: &Point, p: &BigUint) -> BigUint {
-        // j + k = r mod p
-        todo!()
-    }
-
-    fn inv_addition(j: &Point, p: &BigUint) -> BigUint {
+    fn inv_addition(j: &BigUint, p: &BigUint) -> BigUint {
         // -j mod p
         todo!()
     }
 
-    fn inv_multiplication(j: &Point, p: &BigUint) -> BigUint {
+    fn inv_multiplication(j: &BigUint, p: &BigUint) -> BigUint {
         // // c⁽-1) mod p
         todo!()
     }
 
 
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_add_1() {
+        let j = BigUint::from(4u32);
+        let k = BigUint::from(10u32);
+        let p = BigUint::from(11u32);
+
+        let r = FiniteField::add(&j, &k, &p);
+
+        assert_eq!(r, BigUint::from(3u32));
+    }
+    #[test]
+    fn test_add_2() {
+        let j = BigUint::from(4u32);
+        let k = BigUint::from(10u32);
+        let p = BigUint::from(31u32);
+
+        let r = FiniteField::add(&j, &k, &p);
+
+        assert_eq!(r, BigUint::from(14u32));
+    }
 }
