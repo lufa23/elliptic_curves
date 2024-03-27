@@ -23,6 +23,12 @@ impl EllipticCurve {
             (Point::Identity, _) => k.clone(),
             (_, Point::Identity) => j.clone(),
             (Point::Coordinate(x1, y1), Point::Coordinate(x2, y2)) => {
+                
+                let y1plusy2 = FiniteField::add(&y1, &y2, &self.p);
+                if x1 == x2 && y1plusy2 == BigUint::from(0u32) {
+                    return Point::Identity;
+                }
+            
                 // s = (y2 -y1) / (x2 -x1)
                 // x3 = s² -x1 -x2
                 // y³ = s (x1 -x3) -y1 mod p
@@ -105,7 +111,9 @@ impl FiniteField {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use num_bigint::U32Digits;
+
     use super::*;
 
     #[test]
@@ -171,7 +179,7 @@ mod test {
     }
 
     #[test]
-    fn test_inv_addition_check() {
+    fn test_inv_addition_identity() {
         let j = BigUint::from(4u32);
         let p = BigUint::from(51u32);
 
@@ -182,7 +190,7 @@ mod test {
     }
 
     #[test]
-    fn test_inv_multiplication_check() {
+    fn test_inv_multiplication_identity() {
         let j = BigUint::from(4u32);
         let p = BigUint::from(11u32);
 
@@ -225,5 +233,43 @@ mod test {
         let p = BigUint::from(11u32);
 
         assert_eq!(FiniteField::divide(&j, &j, &p), BigUint::from(1u32));
+    }
+
+
+    #[test]
+    fn test_ec_point_addition_identity() {
+        let ec = EllipticCurve {
+            a: BigUint::from(2u32),
+            b: BigUint::from(2u32),
+            p: BigUint::from(17u32),
+        };
+
+        let p1 = Point::Coordinate(BigUint::from(6u32), BigUint::from(3u32));
+        let p2 = Point::Identity;
+        let pr = p1.clone();
+        let res = ec.add(&p1, &p2);
+        assert_eq!(res, pr);
+
+        let res = ec.add( &p2, &p1);
+        assert_eq!(res, pr);
+    }
+
+
+    #[test]
+    fn test_ec_point_addition_reflectied_in_x() {
+        //y² = x³ + 2x + 2 mod 17
+        let ec = EllipticCurve {
+            a: BigUint::from(2u32),
+            b: BigUint::from(2u32),
+            p: BigUint::from(17u32),
+        };
+
+        // (5,16) + (5,1) = Point::Identity
+        let p1 = Point::Coordinate(BigUint::from(5u32), BigUint::from(16u32));
+        let p2 = Point::Coordinate(BigUint::from(5u32), BigUint::from(1u32));
+        let pr = Point::Identity;
+
+        let res: Point = ec.add(&p1, &p2);
+        assert_eq!(res, pr);
     }
 }
