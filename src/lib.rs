@@ -81,10 +81,21 @@ impl EllipticCurve {
         (x3, y3)
     }
 
-    fn scalar_mul(j: &Point) -> Point {
-        //addition/doubling algorithm
-        // B = g* A
-        todo!()
+    fn scalar_mul(&self , j: &Point, k: &BigUint) -> Point {
+        //addition/doubling algorithm B = d *A
+        // T = A
+        //for i in range (0, bits of d - 1)
+        // T = 2* T
+        // if bit i of d == 1
+        // T = T + A
+        let mut t = j.clone();
+        for i in 0..(k.bits() - 1) {
+            t = self.double(&t);
+            if k.bit(i) {
+                t = self.add(&t, j);
+            }
+        }
+        t
     }
 
     pub fn is_on_curve(&self, j: &Point) -> bool {
@@ -336,6 +347,30 @@ mod tests {
         let pr = Point::Identity;
 
         let res: Point = ec.double(&p1);
+        assert_eq!(res, pr);
+    }
+
+
+
+    #[test]
+    fn test_ec_scalar_multiplication() {
+        //y² = x³ + 2x + 2 mod 17 |G| = 19    19 * A = I
+        let ec = EllipticCurve {
+            a: BigUint::from(2u32),
+            b: BigUint::from(2u32),
+            p: BigUint::from(17u32),
+        };
+
+        // (5,1) + (5,1) = (6,3)
+        let j = Point::Coordinate(BigUint::from(5u32), BigUint::from(1u32));
+
+        let pr = Point::Coordinate(BigUint::from(6u32), BigUint::from(3u32));
+        let res: Point = ec.scalar_mul(&j, &BigUint::from(2u32));
+        assert_eq!(res, pr);
+
+        // 10 (5,1)  = (7,11)
+        let pr = Point::Coordinate(BigUint::from(7u32), BigUint::from(11u32));
+        let res: Point = ec.scalar_mul(&j, &BigUint::from(10u32));
         assert_eq!(res, pr);
     }
 }
