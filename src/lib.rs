@@ -32,15 +32,11 @@ impl EllipticCurve {
                 // s = (y2 -y1) / (x2 -x1) mod p
                 // x3 = s² -x1 -x2 mod p
                 // y³ = s (x1 -x3) -y1 mod p
-                let y2minusy1 = (FiniteField::subtract(y2, y1, &self.p));
-                let x2minusx1 = (FiniteField::subtract(x2, x1, &self.p));
-                let s = FiniteField::divide(&y2minusy1, &x2minusx1, &self.p);
-                let s2 = s.modpow(&BigUint::from(2u32), &self.p);
-                let s2minusx1 = FiniteField::subtract(&s2, x1, &self.p);
-                let x3 = FiniteField::subtract(&s2minusx1, x2, &self.p);
-                let x1minusx3 = FiniteField::subtract(x1, &x3, &self.p);
-                let sx1minusx3 = FiniteField::mul(&s, &x1minusx3, &self.p);
-                let y3 = FiniteField::subtract(&sx1minusx3, &y1, &self.p);
+                let numerator = (FiniteField::subtract(y2, y1, &self.p));
+                let denominator = (FiniteField::subtract(x2, x1, &self.p));
+                let s = FiniteField::divide(&numerator, &denominator, &self.p);
+
+                let (x3, y3) = self.compute_x3_y3(&x1, &y1, &x2, &s);
                 Point::Coordinate(x3, y3)
             }
         }
@@ -335,7 +331,7 @@ mod tests {
             p: BigUint::from(17u32),
         };
 
-        // (5,1) + (5,1) = (6,3)
+        // I + I = I
         let p1 = Point::Identity;
         let pr = Point::Identity;
 
