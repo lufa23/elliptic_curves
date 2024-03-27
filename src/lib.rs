@@ -1,10 +1,12 @@
-use num_bigint::{BigUint};
+use num_bigint::BigUint;
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 enum Point {
     Coordinate(BigUint, BigUint),
     Identity,
 }
+
+#[derive(PartialEq, Clone, Debug)]
 struct EllipticCurve {
     // y² = x² + a*x +b
     a: BigUint,
@@ -18,9 +20,9 @@ impl EllipticCurve {
         assert!(self.is_on_curve(k), "Point does not belong to curve");
         assert!(*j != *k, "Points are identical.");
         match (j, k) {
-            (Point::Identity,_) => k.clone(),
+            (Point::Identity, _) => k.clone(),
             (_, Point::Identity) => j.clone(),
-            (Point::Coordinate(x1, y1) , Point::Coordinate(x2, y2)) => {
+            (Point::Coordinate(x1, y1), Point::Coordinate(x2, y2)) => {
                 // s = (y2 -y1) / (x2 -x1)
                 // x3 = s² -x1 -x2
                 // y³ = s (x1 -x3) -y1 mod p
@@ -34,9 +36,6 @@ impl EllipticCurve {
                 let sx1minusx3 = FiniteField::mul(&s, &x1minusx3, &self.p);
                 let y3 = FiniteField::subtract(&sx1minusx3, &y1, &self.p);
                 Point::Coordinate(x3, y3)
-
-
-
             }
         }
     }
@@ -45,31 +44,27 @@ impl EllipticCurve {
         todo!()
     }
 
-
     fn scalar_mul(j: &Point) -> Point {
         //addition/doubling algorithm
         // B = g* A
         todo!()
     }
 
-
-    fn is_on_curve(&self, j: &Point) -> bool {
+    pub fn is_on_curve(&self, j: &Point) -> bool {
         // y² = x³ + a*x + b
         match j {
-            Point::Coordinate(x, y ) => {
-                let y2 = y.modpow (&BigUint::from(2u32), &self.p);
+            Point::Coordinate(x, y) => {
+                let y2 = y.modpow(&BigUint::from(2u32), &self.p);
                 let x3 = x.modpow(&BigUint::from(3u32), &self.p);
-                let ax = &self.a * x;
-                y2 == x3 +ax + &self.b
+                let ax = FiniteField::mul(&self.a, x, &self.p);
+                let x3plusax = FiniteField::add(&x3, &ax, &self.p);
+                y2 == FiniteField::add(&x3plusax, &self.b, &self.p)
             }
 
             Point::Identity => true,
-        } 
-
+        }
     }
-
 }
-
 
 struct FiniteField {}
 
@@ -86,15 +81,11 @@ impl FiniteField {
         r.modpow(&BigUint::from(1u32), p)
     }
 
-   pub fn inv_addition(j: &BigUint, p: &BigUint) -> BigUint {
+    pub fn inv_addition(j: &BigUint, p: &BigUint) -> BigUint {
         // -j mod p "number {} is bigger or equal than p: {}", j , p
-        assert!(
-            j < p,
-            "j >= p" 
-        );
+        assert!(j < p, "j >= p");
         p - j
     }
-
 
     pub fn subtract(j: &BigUint, k: &BigUint, p: &BigUint) -> BigUint {
         let k_inv = FiniteField::inv_addition(k, p);
@@ -103,16 +94,14 @@ impl FiniteField {
 
     pub fn inv_multiplication(j: &BigUint, p: &BigUint) -> BigUint {
         // TODO: this function is only valid for a p prime
-        // c^(-1) mod p = c^(p-2) mod p 
+        // c^(-1) mod p = c^(p-2) mod p
         j.modpow(&(p - BigUint::from(2u32)), p)
     }
 
     pub fn divide(j: &BigUint, k: &BigUint, p: &BigUint) -> BigUint {
         let k_inv = FiniteField::inv_multiplication(k, p);
-        FiniteField::add (j, &k_inv, p)
+        FiniteField::mul(j, &k_inv, p)
     }
-
-
 }
 
 #[cfg(test)]
@@ -151,7 +140,6 @@ mod test {
         assert_eq!(r, BigUint::from(7u32));
     }
 
-
     #[test]
     fn test_mul_2() {
         let j = BigUint::from(4u32);
@@ -180,7 +168,6 @@ mod test {
         let p = BigUint::from(51u32);
 
         let r = FiniteField::inv_addition(&j, &p);
-
     }
 
     #[test]
@@ -192,7 +179,6 @@ mod test {
 
         assert_eq!(j_inv, BigUint::from(47u32));
         assert_eq!(FiniteField::add(&j, &j_inv, &p), BigUint::from(0u32));
-
     }
 
     #[test]
@@ -205,7 +191,39 @@ mod test {
         // 4 * 3 mod 11 = 12 mod 11 = 1
         assert_eq!(j_inv, BigUint::from(3u32));
         assert_eq!(FiniteField::mul(&j, &j_inv, &p), BigUint::from(1u32));
-
     }
 
+    #[test]
+    fn test_ec_point_addition() {
+        //y² = x³ + 2x + 2 mod 17
+        let ec = EllipticCurve {
+            a: BigUint::from(2u32),
+            b: BigUint::from(2u32),
+            p: BigUint::from(17u32),
+        };
+
+        // (6,3) + (5,1) = (10,6)
+        let p1 = Point::Coordinate(BigUint::from(6u32), BigUint::from(3u32));
+        let p2 = Point::Coordinate(BigUint::from(5u32), BigUint::from(1u32));
+        let pr = Point::Coordinate(BigUint::from(10u32), BigUint::from(6u32));
+
+        let res: Point = ec.add(&p1, &p2);
+        assert_eq!(res, pr);
+    }
+
+    #[test]
+    fn test_subtract() {
+        let j = BigUint::from(4u32);
+        let p = BigUint::from(51u32);
+
+        assert_eq!(FiniteField::subtract(&j, &j, &p), BigUint::from(0u32));
+    }
+
+    #[test]
+    fn test_divide() {
+        let j = BigUint::from(4u32);
+        let p = BigUint::from(11u32);
+
+        assert_eq!(FiniteField::divide(&j, &j, &p), BigUint::from(1u32));
+    }
 }
