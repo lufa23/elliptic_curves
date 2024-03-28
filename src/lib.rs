@@ -1,4 +1,6 @@
 use num_bigint::BigUint;
+mod ecdsa;
+
 
 #[derive(PartialEq, Clone, Debug)]
 enum Point {
